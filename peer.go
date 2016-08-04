@@ -55,37 +55,14 @@ func (p *peer) loop(actions <-chan func()) {
 func (p *peer) register(send mesh.Gossip) {
 	p.actions <- func() { p.send = send }
 }
-
-// Return the current value of the counter.
-func (p *peer) get() int {
-	return p.st.get()
-}
-
-// Increment the counter by one.
-func (p *peer) incr() (result int) {
-	c := make(chan struct{})
-	p.actions <- func() {
-		defer close(c)
-		st := p.st.incr()
-		if p.send != nil {
-			p.send.GossipBroadcast(st)
-		} else {
-			p.logger.Printf("no sender configured; not broadcasting update right now")
-		}
-		result = st.get()
-	}
-	<-c
-	return result
-}
-
 func (p *peer) stop() {
 	close(p.quit)
 }
 
 // Return a copy of our complete state.
 func (p *peer) Gossip() (complete mesh.GossipData) {
-	complete = p.st.copy()
-	p.logger.Printf("Gossip => complete %v", complete.(*state).set)
+	complete = nil //p.st.copy()
+	//p.logger.Printf("Gossip => complete %v", complete.(*state).set)
 	return complete
 }
 
@@ -101,7 +78,7 @@ func (p *peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 	if delta == nil {
 		p.logger.Printf("OnGossip %v => delta %v", set, delta)
 	} else {
-		p.logger.Printf("OnGossip %v => delta %v", set, delta.(*state).set)
+		// p.logger.Printf("OnGossip %v => delta %v", set, delta.(*state).set)
 	}
 	return delta, nil
 }
@@ -118,7 +95,7 @@ func (p *peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 	if received == nil {
 		p.logger.Printf("OnGossipBroadcast %s %v => delta %v", src, set, received)
 	} else {
-		p.logger.Printf("OnGossipBroadcast %s %v => delta %v", src, set, received.(*state).set)
+		//p.logger.Printf("OnGossipBroadcast %s %v => delta %v", src, set, received.(*state).set)
 	}
 	return received, nil
 }
