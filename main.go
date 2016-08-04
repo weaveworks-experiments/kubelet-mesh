@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"sort"
@@ -23,7 +22,6 @@ import (
 func main() {
 	peers := &stringset{}
 	var (
-		httpListen = flag.String("http", ":8080", "HTTP listen address")
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", mustHardwareAddr(), "MAC address, i.e. mesh peer ID")
 		nickname   = flag.String("nickname", mustHostname(), "peer nickname")
@@ -101,11 +99,6 @@ func main() {
 		signal.Notify(c, syscall.SIGINT)
 		errs <- fmt.Errorf("%s", <-c)
 	}()
-	go func() {
-		logger.Printf("HTTP server starting (%s)", *httpListen)
-		http.HandleFunc("/", handle(peer))
-		errs <- http.ListenAndServe(*httpListen, nil)
-	}()
 
 	logger.Print(<-errs)
 }
@@ -113,18 +106,6 @@ func main() {
 type counter interface {
 	get() int
 	incr() int
-}
-
-func handle(c counter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			fmt.Fprintf(w, "get => %d\n", c.get())
-
-		case "POST":
-			fmt.Fprintf(w, "incr => %d\n", c.incr())
-		}
-	}
 }
 
 type stringset map[string]struct{}

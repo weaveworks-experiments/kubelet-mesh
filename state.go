@@ -13,7 +13,6 @@ import (
 // state is an implementation of a G-counter.
 type state struct {
 	mtx    sync.RWMutex
-	set    map[mesh.PeerName]int
 	cert   map[mesh.PeerName]string
 	self   mesh.PeerName
 	rootCA map[mesh.PeerName]RootCAPublicKey
@@ -32,7 +31,6 @@ var _ mesh.GossipData = &state{}
 // Other peers will populate us with data.
 func newState(self mesh.PeerName, certInfo RootCAPublicKey) *state {
 	return &state{
-		set:    map[mesh.PeerName]int{},
 		rootCA: map[mesh.PeerName]RootCAPublicKey{},
 		self:   self,
 	}
@@ -41,12 +39,16 @@ func newState(self mesh.PeerName, certInfo RootCAPublicKey) *state {
 func (st *state) get() (result int) {
 	st.mtx.RLock()
 	defer st.mtx.RUnlock()
-	for _, v := range st.set {
-		result += v
-	}
-	return result
+	/*
+		for _, v := range st.set {
+			result += v
+		}
+		return result
+	*/
+	return 0
 }
 
+/*
 func (st *state) incr() (complete *state) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
@@ -55,7 +57,9 @@ func (st *state) incr() (complete *state) {
 		set: st.set,
 	}
 }
+*/
 
+/*
 func (st *state) copy() *state {
 	st.mtx.RLock()
 	defer st.mtx.RUnlock()
@@ -63,6 +67,7 @@ func (st *state) copy() *state {
 		set: st.set,
 	}
 }
+*/
 
 // Encode serializes our complete state to a slice of byte-slices.
 // In this simple example, we use a single JSON-encoded buffer.
@@ -70,9 +75,11 @@ func (st *state) Encode() [][]byte {
 	st.mtx.RLock()
 	defer st.mtx.RUnlock()
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(st.set); err != nil {
-		panic(err)
-	}
+	/*
+		if err := gob.NewEncoder(&buf).Encode(st.set); err != nil {
+			panic(err)
+		}
+	*/
 	return [][]byte{buf.Bytes()}
 }
 

@@ -30,7 +30,7 @@ var _ mesh.Gossiper = &peer{}
 func newPeer(self mesh.PeerName, certInfo RootCAPublicKey, logger *log.Logger) *peer {
 	actions := make(chan func())
 	p := &peer{
-		st:      newState(self),
+		st:      newState(self, certInfo),
 		send:    nil, // must .register() later
 		actions: actions,
 		quit:    make(chan struct{}),
