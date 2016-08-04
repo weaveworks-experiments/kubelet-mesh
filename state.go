@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"net/url"
 	"sync"
 	"time"
 
@@ -11,10 +12,11 @@ import (
 )
 
 type state struct {
-	mtx    sync.RWMutex
-	cert   map[mesh.PeerName]string
-	self   mesh.PeerName
-	rootCA map[mesh.PeerName]RootCAPublicKey
+	mtx           sync.RWMutex
+	cert          map[mesh.PeerName]string
+	self          mesh.PeerName
+	rootCA        map[mesh.PeerName]RootCAPublicKey
+	apiserverURLs map[mesh.PeerName][]url.URL
 }
 
 type RootCAPublicKey struct {
@@ -30,8 +32,9 @@ var _ mesh.GossipData = &state{}
 // Other peers will populate us with data.
 func newState(self mesh.PeerName, certInfo RootCAPublicKey) *state {
 	return &state{
-		rootCA: map[mesh.PeerName]RootCAPublicKey{},
-		self:   self,
+		rootCA:        map[mesh.PeerName]RootCAPublicKey{},
+		apiserverURLs: map[mesh.PeerName][]url.URL{},
+		self:          self,
 	}
 }
 
