@@ -30,12 +30,18 @@ var _ mesh.GossipData = &state{}
 // Construct an empty state object, ready to receive updates.
 // This is suitable to use at program start.
 // Other peers will populate us with data.
-func newState(self mesh.PeerName, certInfo RootCAPublicKey) *state {
-	return &state{
+func newState(self mesh.PeerName, certInfo *RootCAPublicKey) *state {
+	st := &state{
 		rootCA:        map[mesh.PeerName]RootCAPublicKey{},
 		apiserverURLs: map[mesh.PeerName][]url.URL{},
 		self:          self,
 	}
+
+	if certInfo != nil {
+		st.rootCA[self] = *certInfo
+	}
+
+	return st
 }
 
 // Encode serializes our complete state to a slice of byte-slices.
