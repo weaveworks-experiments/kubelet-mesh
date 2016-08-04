@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"crypto/x509"
 	"encoding/pem"
@@ -98,6 +99,11 @@ func main() {
 		c := make(chan os.Signal)
 		signal.Notify(c, syscall.SIGINT)
 		errs <- fmt.Errorf("%s", <-c)
+	}()
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		logger.Print(mesh.NewStatus(router).Connections)
 	}()
 
 	logger.Print(<-errs)
