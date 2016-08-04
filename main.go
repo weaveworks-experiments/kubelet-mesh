@@ -48,7 +48,7 @@ func main() {
 		logger.Fatalf("%s: %v", *hwaddr, err)
 	}
 
-	var certInfo RootCAPublicKey
+	certInfo := &RootCAPublicKey{}
 
 	if *rootCA != "" {
 		logger.Print("Found a certificate...")
