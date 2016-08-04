@@ -27,8 +27,8 @@ func main() {
 		hwaddr     = flag.String("hwaddr", mustHardwareAddr(), "MAC address, i.e. mesh peer ID")
 		nickname   = flag.String("nickname", mustHostname(), "peer nickname")
 		password   = flag.String("password", "", "password (optional)")
-		//channel    = flag.String("channel", "default", "gossip channel name")
-		rootCA = flag.String("root-ca", "", "root CA certificate")
+		channel    = flag.String("channel", "default", "gossip channel name")
+		rootCA     = flag.String("root-ca", "", "root CA certificate")
 	)
 	flag.Var(peers, "peer", "initial peer (may be repeated)")
 	flag.Parse()
@@ -79,9 +79,9 @@ func main() {
 		TrustedSubnets:     []*net.IPNet{},
 	}, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
-	//peer := newPeer(name, certInfo, logger)
-	//gossip := router.NewGossip(*channel, peer)
-	//peer.register(gossip)
+	peer := newPeer(name, certInfo, logger)
+	gossip := router.NewGossip(*channel, peer)
+	peer.register(gossip)
 
 	func() {
 		logger.Printf("mesh router starting (%s)", *meshListen)
