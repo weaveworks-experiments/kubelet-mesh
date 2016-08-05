@@ -122,11 +122,11 @@ func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) (result ClusterInfo, delta
 		deltaURLs[url] = true
 	}
 	newResultURLs := []string{}
-	for url, _ := range urls {
+	for url, _ := range resultURLs {
 		newResultURLs = append(newResultURLs, url)
 	}
 	newDeltaURLs := []string{}
-	for url, _ := range urls {
+	for url, _ := range deltaURLs {
 		newDeltaURLs = append(newDeltaURLs, url)
 	}
 	result.ApiserverURLs = newResultURLs
@@ -137,7 +137,7 @@ func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) (result ClusterInfo, delta
 func (st *state) mergeReceived(set ClusterInfo) (received mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
-	cl, _ := mergedClusterInfo(v, st.set)
+	cl, _ := mergedClusterInfo(set, st.set)
 	st.set = cl
 	return &state{
 		set: set,
@@ -148,7 +148,7 @@ func (st *state) mergeDelta(set ClusterInfo) (delta mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	cl, delta := mergedClusterInfo(v, st.set)
+	cl, delta := mergedClusterInfo(set, st.set)
 	st.set = cl
 
 	if len(set) <= 0 {

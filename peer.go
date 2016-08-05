@@ -70,7 +70,7 @@ func (p *peer) Gossip() (complete mesh.GossipData) {
 // Merge the gossiped data represented by buf into our state.
 // Return the state information that was modified.
 func (p *peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
-	var set map[mesh.PeerName]ClusterInfo
+	var set ClusterInfo
 	if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&set); err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (p *peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 // Merge the gossiped data represented by buf into our state.
 // Return the state information that was modified.
 func (p *peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.GossipData, err error) {
-	var set map[mesh.PeerName]ClusterInfo
+	var set ClusterInfo
 	if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&set); err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (p *peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 
 // Merge the gossiped data represented by buf into our state.
 func (p *peer) OnGossipUnicast(src mesh.PeerName, buf []byte) error {
-	var set map[mesh.PeerName]ClusterInfo
+	var set ClusterInfo
 	if err := gob.NewDecoder(bytes.NewReader(buf)).Decode(&set); err != nil {
 		return err
 	}
