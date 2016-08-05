@@ -78,66 +78,61 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return st.mergeComplete(other.(*state).copy().set)
 }
 
-func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) (result ClusterInfo, delta ClusterInfo) {
-	if peerInfo.RootCA != nil {
-		if peerInfo.RootCA.Signature != nil {
-			logger.Println("peerInfo.RootCA.Signature:", peerInfo.RootCA.Signature[:8])
+func mergeClusterInfo(ours, theirs ClusterInfo) (result, delta ClusterInfo) {
+
+	if theirs.RootCA != nil {
+		if theirs.RootCA.Signature != nil {
+			logger.Println("theirs.RootCA.Signature:", theirs.RootCA.Signature[:8])
 		} else {
-			logger.Println("peerInfo.RootCA.Signature: nil")
+			logger.Println("theirs.RootCA.Signature: nil")
 		}
 	} else {
-		logger.Println("peerInfo.RootCA: nil")
+		logger.Println("theirs.RootCA: nil")
 	}
-	if ourInfo.RootCA != nil {
-		if ourInfo.RootCA.Signature != nil {
-			logger.Println("ourInfo.RootCA.Signature:", ourInfo.RootCA.Signature[:8])
+	if ours.RootCA != nil {
+		if ours.RootCA.Signature != nil {
+			logger.Println("ours.RootCA.Signature:", ours.RootCA.Signature[:8])
 		} else {
-			logger.Println("ourInfo.RootCA.Signature: nil")
+			logger.Println("ours.RootCA.Signature: nil")
 		}
 	} else {
-		logger.Println("ourInfo.RootCA: nil")
+		logger.Println("ours.RootCA: nil")
 	}
 
-	result = ClusterInfo{}
-	delta = ClusterInfo{}
-	// keep the root CA we're given if it exists and our current state says
-	// it doesn't or if it's newer than the one we know about in our
-	// current state
-	result.RootCA = ourInfo.RootCA
-	if peerInfo.RootCA != nil || peerInfo.RootCA.NotBefore.UnixNano() > ourInfo.RootCA.NotBefore.UnixNano() {
-		if peerInfo.RootCA != nil {
-			result.RootCA = peerInfo.RootCA
-			delta.RootCA = peerInfo.RootCA
+	result = ours
+
+	if theirs.RootCA != nil {
+		if ours.RootCA == nil || theirs.RootCA.NotBefore.After(ours.RootCA.NotBefore) {
+			// Their root CA is both specified and newer than ours.
+			// We take it.
+			result.RootCA = theirs.RootCA
+			delta.RootCA = theirs.RootCA
 		}
 	}
-	// now take the union of the URLs we're given and the URLs we know
-	// about
-	resultURLs := map[string]bool{}
-	deltaURLs := map[string]bool{}
-	for _, url := range ourInfo.ApiserverURLs {
-		resultURLs[url] = true
+
+	existing := map[string]struct{}{}
+	incoming := map[string]struct{}{}
+	for _, url := range ours.ApiserverURLs {
+		existing[url] = struct{}{}
 	}
-	for _, url := range peerInfo.ApiserverURLs {
-		resultURLs[url] = true
-		deltaURLs[url] = true
+	for _, url := range theirs.ApiserverURLs {
+		incoming[url] = struct{}{}
 	}
-	newResultURLs := []string{}
-	for url, _ := range resultURLs {
-		newResultURLs = append(newResultURLs, url)
+	for url := range incoming {
+		if _, ok := existing[url]; !ok {
+			// Don't have, do want; merge in.
+			result.ApiserverURLs = append(result.ApiserverURLs, url)
+			delta.ApiserverURLs = append(delta.ApiserverURLs, url)
+		}
 	}
-	newDeltaURLs := []string{}
-	for url, _ := range deltaURLs {
-		newDeltaURLs = append(newDeltaURLs, url)
-	}
-	result.ApiserverURLs = newResultURLs
-	delta.ApiserverURLs = newDeltaURLs
-	return
+
+	return result, delta
 }
 
 func (st *state) mergeReceived(set ClusterInfo) (received mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
-	cl, _ := mergedClusterInfo(set, st.set)
+	cl, _ := mergeClusterInfo(set, st.set)
 	st.set = cl
 	return &state{
 		set: set,
@@ -148,7 +143,7 @@ func (st *state) mergeDelta(set ClusterInfo) (delta mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	cl, d := mergedClusterInfo(set, st.set)
+	cl, d := mergeClusterInfo(set, st.set)
 	st.set = cl
 
 	if len(set.ApiserverURLs) <= 0 && set.RootCA == nil {
@@ -164,7 +159,7 @@ func (st *state) mergeComplete(set ClusterInfo) (complete mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	cl, _ := mergedClusterInfo(set, st.set)
+	cl, _ := mergeClusterInfo(set, st.set)
 	st.set = cl
 	return &state{
 		set: st.set,
