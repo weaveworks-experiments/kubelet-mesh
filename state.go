@@ -41,13 +41,13 @@ var _ mesh.GossipData = &state{}
 func newState(self mesh.PeerName, certInfo *RootCAPublicKey, apiservers []string, log_ptr *log.Logger) *state {
 	logger = log_ptr
 	st := &state{
-		set:  map[mesh.PeerName]ClusterInfo{},
+		set:  ClusterInfo{},
 		self: self,
 	}
 
-	st.set[self] = ClusterInfo{RootCA: certInfo, ApiserverURLs: apiservers}
+	st.set = ClusterInfo{RootCA: certInfo, ApiserverURLs: apiservers}
 
-	logger.Printf("I have root CA which is not valid before %v", st.set[self].RootCA.NotBefore)
+	logger.Printf("I have root CA which is not valid before %v", st.set.RootCA.NotBefore)
 
 	return st
 }
@@ -134,7 +134,7 @@ func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) (result ClusterInfo, delta
 	return
 }
 
-func (st *state) mergeReceived(set map[mesh.PeerName]ClusterInfo) (received mesh.GossipData) {
+func (st *state) mergeReceived(set ClusterInfo) (received mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 	cl, _ := mergedClusterInfo(v, st.set)
@@ -144,7 +144,7 @@ func (st *state) mergeReceived(set map[mesh.PeerName]ClusterInfo) (received mesh
 	}
 }
 
-func (st *state) mergeDelta(set map[mesh.PeerName]ClusterInfo) (delta mesh.GossipData) {
+func (st *state) mergeDelta(set ClusterInfo) (delta mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
@@ -160,7 +160,7 @@ func (st *state) mergeDelta(set map[mesh.PeerName]ClusterInfo) (delta mesh.Gossi
 	}
 }
 
-func (st *state) mergeComplete(set map[mesh.PeerName]ClusterInfo) (complete mesh.GossipData) {
+func (st *state) mergeComplete(set ClusterInfo) (complete mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
