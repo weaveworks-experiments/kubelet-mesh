@@ -80,7 +80,7 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
 	if peerInfo.RootCA != nil {
 		if peerInfo.RootCA.Signature != nil {
-			logger.Println("peerInfo.RootCA:", peerInfo.RootCA.Signature)
+			logger.Println("peerInfo.RootCA:", peerInfo.RootCA.Signature[:8])
 		} else {
 			logger.Println("peerInfo.RootCA.Signature: nil")
 		}
@@ -89,7 +89,7 @@ func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
 	}
 	if ourInfo.RootCA != nil {
 		if ourInfo.RootCA.Signature != nil {
-			logger.Println("ourInfo.RootCA:", ourInfo.RootCA.Signature)
+			logger.Println("ourInfo.RootCA:", ourInfo.RootCA.Signature[:8])
 		} else {
 			logger.Println("ourInfo.RootCA.Signature: nil")
 		}
