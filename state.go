@@ -148,15 +148,15 @@ func (st *state) mergeDelta(set ClusterInfo) (delta mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	cl, delta := mergedClusterInfo(set, st.set)
+	cl, d := mergedClusterInfo(set, st.set)
 	st.set = cl
 
-	if len(set) <= 0 {
+	if len(set.ApiserverURLs) <= 0 && set.RootCA == nil {
 		return nil
 	}
 
 	return &state{
-		set: delta,
+		set: d,
 	}
 }
 
@@ -164,7 +164,7 @@ func (st *state) mergeComplete(set ClusterInfo) (complete mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	cl, _ := mergedClusterInfo(v, st.set)
+	cl, _ := mergedClusterInfo(set, st.set)
 	st.set = cl
 	return &state{
 		set: st.set,
