@@ -14,6 +14,7 @@ import (
 type RootCAPublicKey struct {
 	Bytes     []byte
 	NotBefore time.Time
+	Signature []byte
 }
 
 type ClusterInfo struct {
@@ -77,13 +78,33 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 }
 
 func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
-	logger.Println("mergedClusterInfo(", peerInfo, ",", ourInfo, ")")
+	if peerInfo.RootCA != nil {
+		if peerInfo.RootCA.Signature != nil {
+			logger.Println("peerInfo.RootCA:", peerInfo.RootCA.Signature)
+		} else {
+			logger.Println("peerInfo.RootCA.Signature: nil")
+		}
+	} else {
+		logger.Println("peerInfo.RootCA: nil")
+	}
+	if ourInfo.RootCA != nil {
+		if ourInfo.RootCA.Signature != nil {
+			logger.Println("ourInfo.RootCA:", ourInfo.RootCA.Signature)
+		} else {
+			logger.Println("ourInfo.RootCA.Signature: nil")
+		}
+	} else {
+		logger.Println("ourInfo.RootCA: nil")
+	}
+
 	cl := ClusterInfo{}
 	// keep the root CA we're given if it exists and our current state says
 	// it doesn't or if it's newer than the one we know about in our
 	// current state
-	if ourInfo.RootCA == nil || peerInfo.RootCA.NotBefore.UnixNano() > ourInfo.RootCA.NotBefore.UnixNano() {
-		cl.RootCA = peerInfo.RootCA
+	if peerInfo.RootCA != nil || peerInfo.RootCA.NotBefore.UnixNano() > ourInfo.RootCA.NotBefore.UnixNano() {
+		if peerInfo.RootCA != nil {
+			cl.RootCA = peerInfo.RootCA
+		}
 	}
 	// now take the union of the URLs we're given and the URLs we know
 	// about
