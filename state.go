@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"net/url"
 	"sync"
 	"time"
 
@@ -11,17 +10,21 @@ import (
 	"github.com/weaveworks/mesh"
 )
 
-type state struct {
-	mtx           sync.RWMutex
-	cert          map[mesh.PeerName]string
-	self          mesh.PeerName
-	rootCA        map[mesh.PeerName]RootCAPublicKey
-	apiserverURLs map[mesh.PeerName][]url.URL
-}
-
 type RootCAPublicKey struct {
 	Bytes     []byte
 	NotBefore time.Time
+}
+
+type ClusterInfo struct {
+	RootCA *RootCAPublicKey
+	// TODO ApiserverURLs []url.URL
+	ApiserverURLs []string
+}
+
+type state struct {
+	mtx  sync.RWMutex
+	self mesh.PeerName
+	set  map[mesh.PeerName]ClusterInfo
 }
 
 // state implements GossipData.
@@ -32,16 +35,22 @@ var _ mesh.GossipData = &state{}
 // Other peers will populate us with data.
 func newState(self mesh.PeerName, certInfo *RootCAPublicKey) *state {
 	st := &state{
-		rootCA:        map[mesh.PeerName]RootCAPublicKey{},
-		apiserverURLs: map[mesh.PeerName][]url.URL{},
-		self:          self,
+		set:  map[mesh.PeerName]ClusterInfo{},
+		self: self,
 	}
 
-	if certInfo != nil {
-		st.rootCA[self] = *certInfo
-	}
+	clusterInfo := st.set[self]
+	clusterInfo.RootCA = certInfo
 
 	return st
+}
+
+func (st *state) copy() *state {
+	st.mtx.RLock()
+	defer st.mtx.RUnlock()
+	return &state{
+		set: st.set,
+	}
 }
 
 // Encode serializes our complete state to a slice of byte-slices.
@@ -56,26 +65,72 @@ func (st *state) Encode() [][]byte {
 // Merge merges the other GossipData into this one,
 // and returns our resulting, complete state.
 func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
-	return nil
+	return st.mergeComplete(other.(*state).copy().set)
 }
 
-func (st *state) mergeReceived(set map[mesh.PeerName]int) (received mesh.GossipData) {
+func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
+	cl := ClusterInfo{}
+	// keep the root CA we're given if it exists and our current state says
+	// it doesn't or if it's newer than the one we know about in our
+	// current state
+	if ourInfo.RootCA == nil || peerInfo.RootCA.NotBefore.UnixNano() > ourInfo.RootCA.NotBefore.UnixNano() {
+		cl.RootCA = peerInfo.RootCA
+	}
+	// now take the union of the URLs we're given and the URLs we know
+	// about
+	urls := map[string]bool{}
+	for _, url := range ourInfo.ApiserverURLs {
+		urls[url] = true
+	}
+	for _, url := range peerInfo.ApiserverURLs {
+		urls[url] = true
+	}
+	newURLs := []string{}
+	for url, _ := range urls {
+		newURLs = append(newURLs, url)
+	}
+	cl.ApiserverURLs = newURLs
+	return cl
+}
+
+func (st *state) mergeReceived(set map[mesh.PeerName]ClusterInfo) (received mesh.GossipData) {
+	st.mtx.Lock()
+	defer st.mtx.Unlock()
+	for peer, v := range set {
+		cl := mergedClusterInfo(v, st.set[peer])
+		st.set[peer] = cl
+	}
+	return &state{
+		set: set,
+	}
+}
+
+func (st *state) mergeDelta(set map[mesh.PeerName]ClusterInfo) (delta mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	return nil
+	for peer, v := range set {
+		cl := mergedClusterInfo(v, st.set[peer])
+		st.set[peer] = cl
+	}
+	if len(set) <= 0 {
+		// TODO maybe we needed to mutate 'set' here, but we didn't.
+		return nil
+	}
+	return &state{
+		set: set,
+	}
 }
 
-func (st *state) mergeDelta(set map[mesh.PeerName]int) (delta mesh.GossipData) {
+func (st *state) mergeComplete(set map[mesh.PeerName]ClusterInfo) (complete mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	return nil
-}
-
-func (st *state) mergeComplete(set map[mesh.PeerName]int) (complete mesh.GossipData) {
-	st.mtx.Lock()
-	defer st.mtx.Unlock()
-
-	return nil
+	for peer, v := range set {
+		cl := mergedClusterInfo(v, st.set[peer])
+		st.set[peer] = cl
+	}
+	return &state{
+		set: st.set,
+	}
 }

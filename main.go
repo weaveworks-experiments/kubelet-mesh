@@ -78,6 +78,7 @@ func main() {
 		TrustedSubnets:     []*net.IPNet{},
 	}, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
+	// XXX change "node" to something else, "kubelet"?
 	nodeBootstrapPeer := newNodeBootstrapPeer(name, certInfo, logger)
 	nodeBootstrap := router.NewGossip("kubernetes-node-bootstrap-v0", nodeBootstrapPeer)
 	nodeBootstrapPeer.register(nodeBootstrap)
