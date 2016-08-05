@@ -43,8 +43,9 @@ func newState(self mesh.PeerName, certInfo *RootCAPublicKey, log_ptr *log.Logger
 		self: self,
 	}
 
-	clusterInfo := st.set[self]
-	clusterInfo.RootCA = certInfo
+	st.set[self] = ClusterInfo{RootCA: certInfo}
+
+	logger.Printf("I have root CA which is not valid before %v", st.set[self].RootCA.NotBefore)
 
 	return st
 }

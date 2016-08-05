@@ -63,7 +63,7 @@ func main() {
 			logger.Print(err)
 		}
 
-		logger.Printf("Certificate not valid before: %v", cert.NotBefore)
+		logger.Printf("Picked up root CA certificate which is not valid before %v", cert.NotBefore)
 		certInfo.NotBefore = cert.NotBefore
 		certInfo.Bytes = certBlock.Bytes
 	}
