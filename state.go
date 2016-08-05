@@ -152,7 +152,6 @@ func (st *state) mergeDelta(set map[mesh.PeerName]ClusterInfo) (delta mesh.Gossi
 	st.set = cl
 
 	if len(set) <= 0 {
-		// TODO maybe we needed to mutate 'set' here, but we didn't.
 		return nil
 	}
 
