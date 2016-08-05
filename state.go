@@ -36,14 +36,14 @@ var _ mesh.GossipData = &state{}
 // Construct an empty state object, ready to receive updates.
 // This is suitable to use at program start.
 // Other peers will populate us with data.
-func newState(self mesh.PeerName, certInfo *RootCAPublicKey, log_ptr *log.Logger) *state {
+func newState(self mesh.PeerName, certInfo *RootCAPublicKey, apiservers []string, log_ptr *log.Logger) *state {
 	logger = log_ptr
 	st := &state{
 		set:  map[mesh.PeerName]ClusterInfo{},
 		self: self,
 	}
 
-	st.set[self] = ClusterInfo{RootCA: certInfo}
+	st.set[self] = ClusterInfo{RootCA: certInfo, ApiserverURLs: apiservers}
 
 	logger.Printf("I have root CA which is not valid before %v", st.set[self].RootCA.NotBefore)
 

@@ -22,6 +22,7 @@ import (
 
 func main() {
 	peers := &stringset{}
+	apiservers := &stringset{}
 	var (
 		meshListen = flag.String("mesh", net.JoinHostPort("0.0.0.0", strconv.Itoa(mesh.Port)), "mesh listen address")
 		hwaddr     = flag.String("hwaddr", mustHardwareAddr(), "MAC address, i.e. mesh peer ID")
@@ -30,6 +31,7 @@ func main() {
 		rootCA     = flag.String("root-ca", "", "root CA certificate")
 	)
 	flag.Var(peers, "peer", "initial peer (may be repeated)")
+	flag.Var(apiservers, "apiserver", "the URL of the apiserver (may be repeated)")
 	flag.Parse()
 
 	logger := log.New(os.Stderr, *nickname+"> ", log.LstdFlags)
@@ -79,7 +81,7 @@ func main() {
 	}, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
 	// XXX change "node" to something else, "kubelet"?
-	nodeBootstrapPeer := newNodeBootstrapPeer(name, certInfo, logger)
+	nodeBootstrapPeer := newNodeBootstrapPeer(name, certInfo, apiservers.slice(), logger)
 	nodeBootstrap := router.NewGossip("kubernetes-node-bootstrap-v0", nodeBootstrapPeer)
 	nodeBootstrapPeer.register(nodeBootstrap)
 

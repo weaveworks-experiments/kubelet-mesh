@@ -27,10 +27,10 @@ var _ mesh.Gossiper = &peer{}
 // Construct a peer with empty state.
 // Be sure to register a channel, later,
 // so we can make outbound communication.
-func newNodeBootstrapPeer(self mesh.PeerName, certInfo *RootCAPublicKey, logger *log.Logger) *peer {
+func newNodeBootstrapPeer(self mesh.PeerName, certInfo *RootCAPublicKey, apiservers []string, logger *log.Logger) *peer {
 	actions := make(chan func())
 	p := &peer{
-		st:      newState(self, certInfo, logger),
+		st:      newState(self, certInfo, apiservers, logger),
 		send:    nil, // must .register() later
 		actions: actions,
 		quit:    make(chan struct{}),
