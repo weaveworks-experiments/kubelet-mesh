@@ -2,10 +2,11 @@ package main
 
 import (
 	"bytes"
+	"log"
 	"sync"
 	"time"
 
-	_ "encoding/gob"
+	"encoding/gob"
 
 	"github.com/weaveworks/mesh"
 )
@@ -27,13 +28,16 @@ type state struct {
 	set  map[mesh.PeerName]ClusterInfo
 }
 
+var logger *log.Logger
+
 // state implements GossipData.
 var _ mesh.GossipData = &state{}
 
 // Construct an empty state object, ready to receive updates.
 // This is suitable to use at program start.
 // Other peers will populate us with data.
-func newState(self mesh.PeerName, certInfo *RootCAPublicKey) *state {
+func newState(self mesh.PeerName, certInfo *RootCAPublicKey, log_ptr *log.Logger) *state {
+	logger = log_ptr
 	st := &state{
 		set:  map[mesh.PeerName]ClusterInfo{},
 		self: self,
@@ -59,6 +63,9 @@ func (st *state) Encode() [][]byte {
 	st.mtx.RLock()
 	defer st.mtx.RUnlock()
 	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(st.set); err != nil {
+		panic(err)
+	}
 	return [][]byte{buf.Bytes()}
 }
 
@@ -69,6 +76,7 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 }
 
 func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
+	logger.Println("mergedClusterInfo(", peerInfo, ",", ourInfo, ")")
 	cl := ClusterInfo{}
 	// keep the root CA we're given if it exists and our current state says
 	// it doesn't or if it's newer than the one we know about in our

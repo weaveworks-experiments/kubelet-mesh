@@ -30,7 +30,7 @@ var _ mesh.Gossiper = &peer{}
 func newNodeBootstrapPeer(self mesh.PeerName, certInfo *RootCAPublicKey, logger *log.Logger) *peer {
 	actions := make(chan func())
 	p := &peer{
-		st:      newState(self, certInfo),
+		st:      newState(self, certInfo, logger),
 		send:    nil, // must .register() later
 		actions: actions,
 		quit:    make(chan struct{}),
@@ -62,8 +62,8 @@ func (p *peer) stop() {
 
 // Return a copy of our complete state.
 func (p *peer) Gossip() (complete mesh.GossipData) {
-	complete = nil //p.st.copy()
-	//p.logger.Printf("Gossip => complete %v", complete.(*state).set)
+	complete = p.st.copy()
+	p.logger.Printf("Gossip => complete %v", complete.(*state).set)
 	return complete
 }
 
@@ -79,7 +79,7 @@ func (p *peer) OnGossip(buf []byte) (delta mesh.GossipData, err error) {
 	if delta == nil {
 		p.logger.Printf("OnGossip %v => delta %v", set, delta)
 	} else {
-		// p.logger.Printf("OnGossip %v => delta %v", set, delta.(*state).set)
+		p.logger.Printf("OnGossip %v => delta %v", set, delta.(*state).set)
 	}
 	return delta, nil
 }
@@ -96,7 +96,7 @@ func (p *peer) OnGossipBroadcast(src mesh.PeerName, buf []byte) (received mesh.G
 	if received == nil {
 		p.logger.Printf("OnGossipBroadcast %s %v => delta %v", src, set, received)
 	} else {
-		//p.logger.Printf("OnGossipBroadcast %s %v => delta %v", src, set, received.(*state).set)
+		p.logger.Printf("OnGossipBroadcast %s %v => delta %v", src, set, received.(*state).set)
 	}
 	return received, nil
 }
