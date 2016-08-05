@@ -26,7 +26,8 @@ type ClusterInfo struct {
 type state struct {
 	mtx  sync.RWMutex
 	self mesh.PeerName
-	set  map[mesh.PeerName]ClusterInfo
+	// TODO rename 'set' to 'info'
+	set ClusterInfo
 }
 
 var logger *log.Logger
@@ -77,7 +78,7 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return st.mergeComplete(other.(*state).copy().set)
 }
 
-func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
+func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) (result ClusterInfo, delta ClusterInfo) {
 	if peerInfo.RootCA != nil {
 		if peerInfo.RootCA.Signature != nil {
 			logger.Println("peerInfo.RootCA:", peerInfo.RootCA.Signature[:8])
@@ -97,39 +98,47 @@ func mergedClusterInfo(peerInfo, ourInfo ClusterInfo) ClusterInfo {
 		logger.Println("ourInfo.RootCA: nil")
 	}
 
-	cl := ClusterInfo{}
+	result = ClusterInfo{}
+	delta = ClusterInfo{}
 	// keep the root CA we're given if it exists and our current state says
 	// it doesn't or if it's newer than the one we know about in our
 	// current state
+	result.RootCA = ourInfo.RootCA
 	if peerInfo.RootCA != nil || peerInfo.RootCA.NotBefore.UnixNano() > ourInfo.RootCA.NotBefore.UnixNano() {
 		if peerInfo.RootCA != nil {
-			cl.RootCA = peerInfo.RootCA
+			result.RootCA = peerInfo.RootCA
+			delta.RootCA = peerInfo.RootCA
 		}
 	}
 	// now take the union of the URLs we're given and the URLs we know
 	// about
-	urls := map[string]bool{}
+	resultURLs := map[string]bool{}
+	deltaURLs := map[string]bool{}
 	for _, url := range ourInfo.ApiserverURLs {
-		urls[url] = true
+		resultURLs[url] = true
 	}
 	for _, url := range peerInfo.ApiserverURLs {
-		urls[url] = true
+		resultURLs[url] = true
+		deltaURLs[url] = true
 	}
-	newURLs := []string{}
+	newResultURLs := []string{}
 	for url, _ := range urls {
-		newURLs = append(newURLs, url)
+		newResultURLs = append(newResultURLs, url)
 	}
-	cl.ApiserverURLs = newURLs
-	return cl
+	newDeltaURLs := []string{}
+	for url, _ := range urls {
+		newDeltaURLs = append(newDeltaURLs, url)
+	}
+	result.ApiserverURLs = newResultURLs
+	delta.ApiserverURLs = newDeltaURLs
+	return
 }
 
 func (st *state) mergeReceived(set map[mesh.PeerName]ClusterInfo) (received mesh.GossipData) {
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
-	for peer, v := range set {
-		cl := mergedClusterInfo(v, st.set[peer])
-		st.set[peer] = cl
-	}
+	cl, _ := mergedClusterInfo(v, st.set)
+	st.set = cl
 	return &state{
 		set: set,
 	}
@@ -139,16 +148,16 @@ func (st *state) mergeDelta(set map[mesh.PeerName]ClusterInfo) (delta mesh.Gossi
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	for peer, v := range set {
-		cl := mergedClusterInfo(v, st.set[peer])
-		st.set[peer] = cl
-	}
+	cl, delta := mergedClusterInfo(v, st.set)
+	st.set = cl
+
 	if len(set) <= 0 {
 		// TODO maybe we needed to mutate 'set' here, but we didn't.
 		return nil
 	}
+
 	return &state{
-		set: set,
+		set: delta,
 	}
 }
 
@@ -156,10 +165,8 @@ func (st *state) mergeComplete(set map[mesh.PeerName]ClusterInfo) (complete mesh
 	st.mtx.Lock()
 	defer st.mtx.Unlock()
 
-	for peer, v := range set {
-		cl := mergedClusterInfo(v, st.set[peer])
-		st.set[peer] = cl
-	}
+	cl, _ := mergedClusterInfo(v, st.set)
+	st.set = cl
 	return &state{
 		set: st.set,
 	}
