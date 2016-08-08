@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"sort"
@@ -82,7 +83,16 @@ func main() {
 	}, name, *nickname, mesh.NullOverlay{}, log.New(ioutil.Discard, "", 0))
 
 	// XXX change "node" to something else, "kubelet"?
-	nodeBootstrapPeer := newNodeBootstrapPeer(name, certInfo, apiservers.slice(), logger)
+	apiserverURLs := make([]string, 0)
+	for _, apiserver := range apiservers.slice() {
+		if apiserverURL, err := url.Parse(apiserver); err == nil {
+			apiserverURLs = append(apiserverURLs, apiserverURL.String())
+		} else {
+			logger.Printf("Could not parse %q as ULR - %s", apiserver, err)
+		}
+	}
+
+	nodeBootstrapPeer := newNodeBootstrapPeer(name, certInfo, apiserverURLs, logger)
 	nodeBootstrap := router.NewGossip("kubernetes-node-bootstrap-v0", nodeBootstrapPeer)
 	nodeBootstrapPeer.register(nodeBootstrap)
 
