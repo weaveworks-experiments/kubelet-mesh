@@ -78,7 +78,7 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return st.mergeComplete(other.(*state).copy().set)
 }
 
-func shouldUseTheirCertificate(ours, theirs ClusterInfo) bool {
+func shouldUseTheirRootCA(ours, theirs ClusterInfo) bool {
 	if ours.RootCA == nil {
 		// Our certificate doesn't exist yet, so take whatever they give us
 		return true
@@ -121,7 +121,7 @@ func mergeClusterInfo(ours, theirs ClusterInfo) (result, delta ClusterInfo) {
 	result = ours
 
 	if theirs.RootCA != nil {
-		if shouldUseTheirCertificate(ours, theirs) {
+		if shouldUseTheirRootCA(ours, theirs) {
 			result.RootCA = theirs.RootCA
 			delta.RootCA = theirs.RootCA
 		}
