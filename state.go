@@ -82,16 +82,16 @@ func shouldUseTheirRootCA(ours, theirs ClusterInfo) bool {
 	if ours.RootCA == nil {
 		// Our certificate doesn't exist yet, so take whatever they give us
 		return true
-	} else if theirs.RootCA.NotBefore.After(ours.RootCA.NotBefore) {
+	}
+	if theirs.RootCA.NotBefore.After(ours.RootCA.NotBefore) {
 		// Their certificate is appears to have new validity period, we
 		// should take that and use it
 		return true
-	} else if theirs.RootCA.NotBefore.Equal(ours.RootCA.NotBefore) {
-		if bytes.Compare(theirs.RootCA.Signature, ours.RootCA.Signature) > 0 {
-			// Their certicate has the same starting date of the validity
-			// period, so we should take that and use it
-			return true
-		}
+	}
+	if theirs.RootCA.NotBefore.Equal(ours.RootCA.NotBefore) {
+		// Both certificate has the same starting date of the validity
+		// period, we should always pick the same one
+		return bytes.Compare(theirs.RootCA.Signature, ours.RootCA.Signature) > 0
 	}
 	// Stick to what we have
 	return false
