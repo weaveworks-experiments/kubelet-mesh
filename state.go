@@ -87,7 +87,7 @@ func shouldUseTheirRootCA(ours, theirs ClusterInfo) bool {
 		// should take that and use it
 		return true
 	} else if theirs.RootCA.NotBefore.Equal(ours.RootCA.NotBefore) {
-		if !bytes.Equal(theirs.RootCA.Signature, ours.RootCA.Signature) {
+		if bytes.Compare(theirs.RootCA.Signature, ours.RootCA.Signature) > 0 {
 			// Their certicate has the same starting date of the validity
 			// period, so we should take that and use it
 			return true
