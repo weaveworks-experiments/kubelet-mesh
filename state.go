@@ -78,6 +78,25 @@ func (st *state) Merge(other mesh.GossipData) (complete mesh.GossipData) {
 	return st.mergeComplete(other.(*state).copy().set)
 }
 
+func shouldUseTheirCertificate(ours, theirs ClusterInfo) bool {
+	if ours.RootCA == nil {
+		// Our certificate doesn't exist yet, so take whatever they give us
+		return true
+	} else if theirs.RootCA.NotBefore.After(ours.RootCA.NotBefore) {
+		// Their certificate is appears to have new validity period, we
+		// should take that and use it
+		return true
+	} else if theirs.RootCA.NotBefore.Equal(ours.RootCA.NotBefore) {
+		if !bytes.Equal(theirs.RootCA.Signature, ours.RootCA.Signature) {
+			// Their certicate has the same starting date of the validity
+			// period, so we should take that and use it
+			return true
+		}
+	}
+	// Stick to what we have
+	return false
+}
+
 func mergeClusterInfo(ours, theirs ClusterInfo) (result, delta ClusterInfo) {
 
 	if theirs.RootCA != nil {
@@ -102,9 +121,7 @@ func mergeClusterInfo(ours, theirs ClusterInfo) (result, delta ClusterInfo) {
 	result = ours
 
 	if theirs.RootCA != nil {
-		if ours.RootCA == nil || theirs.RootCA.NotBefore.After(ours.RootCA.NotBefore) {
-			// Their root CA is both specified and newer than ours.
-			// We take it.
+		if shouldUseTheirCertificate(ours, theirs) {
 			result.RootCA = theirs.RootCA
 			delta.RootCA = theirs.RootCA
 		}
